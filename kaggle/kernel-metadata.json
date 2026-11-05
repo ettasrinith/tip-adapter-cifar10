@@ -1,0 +1,14 @@
+{
+  "id": "srinithetta/tip-adapter-cifar-10-clip-vit-b-32",
+  "title": "Tip-Adapter CIFAR-10 CLIP ViT-B-32",
+  "code_file": "tip_adapter_cifar10.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "kernel_sources": [],
+  "dataset_sources": [],
+  "competition_sources": [],
+  "model_sources": []
+}

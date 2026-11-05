@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Kaggle credentials -- NEVER commit
+kaggle.json
+*.kaggle/
+
+# Cached frozen CLIP embeddings (118 MB; regenerable on any run,
+# also exceeds GitHub's 100 MB per-file limit)
+feature_cache/
+kaggle/output/feature_cache/
+
+# Data downloads
+data/
