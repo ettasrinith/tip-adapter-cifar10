@@ -13,3 +13,9 @@ kaggle/output/feature_cache/
 
 # Data downloads
 data/
+
+# Demo: user's own images stay local (folder structure is committed via .gitkeep)
+demo/my_images/**/*
+!demo/my_images/**/
+!demo/my_images/README.txt
+!demo/my_images/**/.gitkeep

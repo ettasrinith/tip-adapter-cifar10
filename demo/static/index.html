@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tip-Adapter-F Demo — CIFAR-10 Few-Shot Classifier</title>
+<style>
+  :root {
+    --bg: #0d1220; --card: #151d31; --card2: #1b2540; --line: #2a3554;
+    --text: #e8ecf6; --muted: #8b96b5; --accent: #4f8cff; --accent2: #38d39f;
+    --warn: #f0a35e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, #1a2a52 0%, var(--bg) 55%);
+    color: var(--text); min-height: 100vh; padding: 28px 20px 60px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header { margin-bottom: 26px; }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: 0.2px; }
+  h1 .hl { background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { color: var(--muted); font-size: 14px; margin-top: 6px; line-height: 1.5; }
+  .badges { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge { font-size: 12px; padding: 4px 10px; border: 1px solid var(--line);
+    border-radius: 999px; color: var(--muted); background: rgba(255,255,255,0.02); }
+  .badge b { color: var(--text); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 12px; }
+
+  .dropzone {
+    border: 2px dashed var(--line); border-radius: 12px; padding: 26px 14px; text-align: center;
+    cursor: pointer; transition: all .15s ease; color: var(--muted); font-size: 14px;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: rgba(79,140,255,0.07); color: var(--text); }
+  .dropzone .icon { font-size: 30px; margin-bottom: 8px; }
+  .btn {
+    display: inline-block; margin-top: 12px; padding: 9px 16px; font-size: 14px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--card2); color: var(--text); cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: linear-gradient(90deg, var(--accent), #3f6fd8); border: none; }
+
+  .gallery { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 16px; }
+  .gal-item { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease; background: var(--card2); }
+  .gal-item:hover { transform: translateY(-2px); border-color: var(--accent2); }
+  .gal-item img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+  .gal-item .lbl { font-size: 10px; text-align: center; padding: 4px 2px; color: var(--muted); }
+
+  .preview-box { margin-top: 16px; text-align: center; }
+  .preview-box img { max-width: 100%; max-height: 220px; border-radius: 12px; border: 1px solid var(--line); }
+  .preview-box .true { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  .pred-hero { display: flex; align-items: center; gap: 18px; }
+  .pred-hero .big { font-size: 34px; font-weight: 800; letter-spacing: 0.5px; }
+  .pred-hero .pct { font-size: 16px; color: var(--accent2); font-weight: 600; }
+  .pred-hero img { width: 96px; height: 96px; border-radius: 12px; border: 1px solid var(--line); object-fit: cover; }
+  .latency { color: var(--muted); font-size: 12px; margin-top: 10px; }
+
+  .bars { margin-top: 6px; }
+  .bar-row { display: grid; grid-template-columns: 90px 1fr 52px; gap: 10px; align-items: center; margin: 7px 0; font-size: 13px; }
+  .bar-track { height: 10px; background: var(--card2); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s ease; }
+  .bar-row .val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  table.methods { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 4px; }
+  table.methods th { text-align: left; color: var(--muted); font-weight: 500; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  table.methods td { padding: 8px; border-bottom: 1px solid rgba(42,53,84,0.5); }
+  table.methods tr.best td { color: var(--accent2); font-weight: 700; }
+  .mini-bar { height: 6px; background: var(--card2); border-radius: 999px; min-width: 60px; }
+  .mini-fill { height: 100%; border-radius: 999px; background: var(--accent); }
+
+  .nn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .nn-item { width: 104px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card2); }
+  .nn-item img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+  .nn-item .cap { font-size: 10.5px; text-align: center; padding: 5px; color: var(--muted); }
+  .nn-item .cap b { color: var(--text); }
+
+  .placeholder { color: var(--muted); text-align: center; padding: 46px 10px; font-size: 14px; }
+  .spinner { display: inline-block; width: 26px; height: 26px; border: 3px solid var(--line);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  footer { margin-top: 26px; color: var(--muted); font-size: 12.5px; line-height: 1.7; }
+  footer b { color: var(--text); }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #3a2530;
+    color: #ffb3c0; border: 1px solid #6d3a4a; padding: 10px 18px; border-radius: 10px; font-size: 13px;
+    display: none; z-index: 50; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tip-Adapter-F <span class="hl">Live Demo</span> — CIFAR-10 Few-Shot Classifier</h1>
+    <div class="sub">A frozen CLIP ViT-B/32 + a 160-image few-shot cache, fine-tuned on a Kaggle Tesla T4.
+      Upload any image (or pick a CIFAR-10 test sample) and watch the cache steer CLIP's prediction.</div>
+    <div class="badges" id="badges"></div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: input -->
+    <div>
+      <div class="card">
+        <h2>1 · Input image</h2>
+        <div class="dropzone" id="dropzone">
+          <div class="icon">🖼️</div>
+          <div><b>Drop an image here</b> or click to browse<br><span style="font-size:12px">any photo — the model maps it to one of the 10 CIFAR-10 classes</span></div>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+        <button class="btn primary" id="randomBtn" style="width:100%">🎲 Predict a random CIFAR-10 test image</button>
+        <div class="preview-box" id="previewBox" style="display:none">
+          <img id="previewImg" alt="input">
+          <div class="true" id="trueLabel"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>2 · Or pick from the test set</h2>
+        <div class="gallery" id="gallery"><div class="placeholder" style="grid-column:1/-1;padding:10px">loading…</div></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>2b · Your own images — demo/my_images/&lt;class&gt;/</h2>
+        <div class="latency" style="margin-bottom:10px">Drop any photo from Google into the class folder (JPG/PNG/WebP,
+          <b>any size</b> — the code resizes to 224×224 automatically), refresh this page, then click one to predict.</div>
+        <div id="myGallery"><div class="placeholder" style="padding:10px">loading…</div></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: results -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <h2>3 · Prediction (Tip-Adapter-F, fine-tuned cache)</h2>
+        <div id="heroResult" class="placeholder">Drop an image or pick a sample — the prediction appears here.<br>
+          <div style="margin-top:14px"><span class="spinner"></span></div></div>
+        <div id="heroContent" style="display:none">
+          <div class="pred-hero">
+            <img id="heroThumb" alt="input">
+            <div>
+              <div class="big" id="heroPred"></div>
+              <div class="pct" id="heroConf"></div>
+              <div class="latency" id="heroMeta"></div>
+            </div>
+          </div>
+          <div class="bars" id="top5Bars" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>4 · How the three methods compare on this image</h2>
+        <table class="methods" id="methodTable">
+          <thead><tr><th>Method</th><th>Predicted</th><th>Confidence</th><th></th></tr></thead>
+          <tbody id="methodBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>5 · Cache explainability — nearest support samples</h2>
+        <div class="nn-row" id="nnRow"><div class="placeholder" style="padding:12px">appears after the first prediction</div></div>
+        <div class="latency" style="margin-top:8px">These are the (fine-tuned) cache keys most similar to your image —
+          the <i>exp(−β(1 − cos))</i> affinity weights their one-hot labels into the final logits.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <b>How it works:</b> final logits = <b>100·q·Tᵀ</b> (zero-shot CLIP) <b>+ α · exp(−β(1 − q·Kᵀ))·V</b> (cache).
+    K = 160 support image features (16/class), V = one-hot labels. In <b>Tip-Adapter-F</b> the keys K were
+    fine-tuned with AdamW (cross-entropy, validation-selected checkpoint); in <b>Tip-Adapter</b> they stay frozen.
+    Recorded test accuracy at 16-shot: zero-shot 85.25 · Tip-Adapter 88.83 · <b>Tip-Adapter-F 90.12</b> (mean over 3 seeds).
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const LABELS = ["airplane","automobile","bird","cat","deer","dog","frog","horse","ship","truck"];
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.style.display = "block";
+  setTimeout(() => t.style.display = "none", 3500); }
+
+async function init() {
+  const h = await (await fetch("/api/health")).json();
+  const ab = h.alpha_beta;
+  $("badges").innerHTML = `
+    <span class="badge">CLIP <b>ViT-B/32</b> (frozen) · ${h.device}</span>
+    <span class="badge">Tip-Adapter-F <b>16-shot cache</b> (α=${ab.tip_adapter_f.alpha.toFixed(2)}, β=${ab.tip_adapter_f.beta.toFixed(2)})</span>
+    <span class="badge">checkpoint <b>${h.meta.checkpoint}</b></span>
+    <span class="badge">test acc <b>${(h.meta.test_acc_16shot_seed42.tip_adapter_f*100).toFixed(2)}%</b> (this seed)</span>`;
+  const gal = await (await fetch("/api/gallery")).json();
+  $("gallery").innerHTML = gal.map(g => `
+    <div class="gal-item" onclick="predictTest(${g.test_idx}, '${g.label}')" title="test #${g.test_idx}">
+      <img src="/api/image/${g.test_idx}" loading="lazy" alt="${g.label}">
+      <div class="lbl">${g.label}</div>
+    </div>`).join("");
+  loadMyImages();
+}
+
+function setLoading(on) {
+  $("heroResult").style.display = on ? "block" : "none";
+  $("heroContent").style.display = on ? "none" : "block";
+}
+
+function render(data) {
+  setLoading(false);
+  const best = data.methods.tip_adapter_f;
+  $("heroThumb").src = data.thumbnail;
+  $("heroPred").textContent = best.pred;
+  $("heroConf").textContent = (best.conf * 100).toFixed(1) + "% confidence";
+  $("heroMeta").textContent = `inference ${data.latency_ms} ms · CPU` +
+    (data.true_label ? ` · true label: ${data.true_label}` : "");
+  const max = best.top5[0].p || 1;
+  $("top5Bars").innerHTML = best.top5.map(t => `
+    <div class="bar-row"><span>${t.name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${(t.p / max * 100).toFixed(1)}%"></div></div>
+      <span class="val">${(t.p * 100).toFixed(1)}%</span></div>`).join("");
+
+  const order = ["zero_shot", "tip_adapter", "tip_adapter_f"];
+  const names = { zero_shot: "Zero-shot CLIP", tip_adapter: "Tip-Adapter (training-free)",
+                  tip_adapter_f: "Tip-Adapter-F (fine-tuned)" };
+  const maxConf = Math.max(...order.map(m => data.methods[m].conf));
+  $("methodBody").innerHTML = order.map(m => {
+    const mm = data.methods[m];
+    const bestRow = m === "tip_adapter_f";
+    return `<tr class="${bestRow ? "best" : ""}">
+      <td>${names[m]}</td><td>${mm.pred}</td>
+      <td>${(mm.conf * 100).toFixed(1)}%</td>
+      <td><div class="mini-bar"><div class="mini-fill" style="width:${(mm.conf / maxConf * 100).toFixed(1)}%"></div></div></td>
+    </tr>`;
+  }).join("");
+
+  $("nnRow").innerHTML = data.nearest_support.map(n => `
+    <div class="nn-item"><img src="/api/train_image/${n.train_idx}" alt="${n.label}">
+      <div class="cap"><b>${n.label}</b><br>cos ${n.sim.toFixed(3)}</div></div>`).join("");
+}
+
+async function loadMyImages() {
+  const groups = await (await fetch("/api/my_images")).json();
+  const rows = groups.filter(g => g.images.length).map(g => `
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px"><b>${g.label}</b> (${g.images.length} image${g.images.length > 1 ? "s" : ""})</div>
+      <div class="nn-row">
+        ${g.images.map(im => `
+          <div class="nn-item" style="cursor:pointer" onclick="predictMy('${im.predict_url}','${g.label}')" title="${im.name}">
+            <img src="${im.url}" loading="lazy" alt="${g.label}">
+            <div class="cap">${im.name.length > 18 ? im.name.slice(0, 17) + "…" : im.name}</div>
+          </div>`).join("")}
+      </div>
+    </div>`).join("");
+  $("myGallery").innerHTML = rows ||
+    '<div class="placeholder" style="padding:12px">No own images yet — put files into demo/my_images/&lt;class&gt;/ and refresh.</div>';
+}
+
+async function predictMy(url, label) {
+  setLoading(true);
+  $("previewBox").style.display = "block";
+  $("previewImg").src = url;
+  $("trueLabel").textContent = "your image from my_images/ · expected class: " + label;
+  try { render(await (await fetch(url)).json()); }
+  catch (e) { toast("prediction failed: " + e); }
+}
+
+async function predictTest(idx, label) {
+  setLoading(true);
+  $("previewBox").style.display = "block";
+  $("previewImg").src = `/api/image/${idx}`;
+  $("trueLabel").textContent = "test image #" + idx + (label ? " · true class: " + label : "");
+  try { render(await (await fetch(`/api/predict_test/${idx}`)).json()); }
+  catch (e) { toast("prediction failed: " + e); }
+}
+
+async function predictUpload(file) {
+  setLoading(true);
+  $("previewBox").style.display = "block";
+  $("previewImg").src = URL.createObjectURL(file);
+  $("trueLabel").textContent = file.name + " · uploaded image (no ground truth)";
+  const fd = new FormData(); fd.append("file", file);
+  try { render(await (await fetch("/api/predict", { method: "POST", body: fd })).json()); }
+  catch (e) { toast("prediction failed: " + e); }
+}
+
+const dz = $("dropzone");
+dz.addEventListener("click", () => $("fileInput").click());
+$("fileInput").addEventListener("change", e => e.target.files[0] && predictUpload(e.target.files[0]));
+dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag"); });
+dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+dz.addEventListener("drop", e => { e.preventDefault(); dz.classList.remove("drag");
+  if (e.dataTransfer.files[0]) predictUpload(e.dataTransfer.files[0]); });
+$("randomBtn").addEventListener("click", () => {
+  const idx = Math.floor(Math.random() * 10000);
+  predictTest(idx, LABELS.length ? "" : "");
+});
+
+init();
+</script>
+</body>
+</html>
